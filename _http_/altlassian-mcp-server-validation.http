@@ -1,0 +1,1432 @@
+### MCP Atlassian HTTP Transport Validation Examples
+### This file provides examples for testing the MCP Atlassian server via HTTP transport
+### Use with REST clients like VS Code REST Client, Postman, or curl
+
+# =============================================
+# =============================================
+# to run in dev mode:
+# uv run mcp-atlassian --transport streamable-http --port 9000 --env-file .env --verbose
+# =============================================
+# =============================================
+
+# =============================================
+# CONFIGURATION
+# =============================================
+@baseUrl = http://localhost:9000
+
+# =============================================
+# SETUP INSTRUCTIONS
+# =============================================
+# 1. Start the server in HTTP mode:
+#    uv run mcp-atlassian --transport streamable-http --port 9000 --env-file .env --verbose
+#
+# 2. Or using Docker:
+#    docker run --rm -p 9000:9000 --env-file .env ghcr.io/sooperset/mcp-atlassian:latest \
+#      --transport streamable-http --port 9000
+#
+# 3. Server endpoints will be available at:
+#    - MCP Protocol: {{baseUrl}}/mcp
+#    - Health Check: {{baseUrl}}/healthz
+#    - SSE Transport: {{baseUrl}}/sse (if using --transport sse)
+#
+# 4. To change the server URL, update the @baseUrl variable above
+
+# =============================================
+# =============================================
+# HEALTH CHECK / INIT
+# =============================================
+# =============================================
+
+### Health Check - Verify server is running
+GET {{baseUrl}}/healthz
+Content-Type: application/json
+
+### Expected Response: {"status": "ok"}
+
+
+### 1. Initialize MCP Session
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+      "tools": {}
+    },
+    "clientInfo": {
+      "name": "http-test-client",
+      "version": "1.0.0"
+    }
+  }
+}
+
+
+# MAKE SURE U POPULATE THIS VARIABLE AS LONG AS "### 1. Initialize MCP Session" request return result
+# retrieve from header: "mcp-session-id": "your-session-key-id"
+@sessionId = 1004facdbb774a81b74c70c332bc5c2c
+
+
+### 1a. Send Initialized Notification (REQUIRED after initialize)
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/initialized",
+  "params": {}
+}
+
+### 2. List Available Tools
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/list",
+  "params": {}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# =============================================
+# =============================================
+# JIRA FUNCTIONALITY
+# =============================================
+# =============================================
+
+# =============================================
+# JIRA - SEARCH & RETRIEVAL
+# =============================================
+
+### Jira Search Issues - Basic
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_search",
+    "arguments": {
+      "jql": "project = SMP ORDER BY created DESC",
+      "limit": 5
+    }
+  }
+}
+
+### Jira Search with All Fields
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_search",
+    "arguments": {
+      "jql": "assignee = currentUser() ORDER BY updated DESC",
+      "fields": "*all",
+      "limit": 3
+    }
+  }
+}
+
+### Jira Search with Custom Fields and Expand
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_search",
+    "arguments": {
+      "jql": "status = 'In Progress' AND project = SMP",
+      "fields": "summary,status,assignee,priority,updated",
+      "limit": 10,
+      "expand": "transitions"
+    }
+  }
+}
+
+### Jira Search Fields
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_search_fields",
+    "arguments": {
+      "keyword": "epic",
+      "limit": 10
+    }
+  }
+}
+
+### Get Jira Issue - Basic
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_get_issue",
+    "arguments": {
+      "issue_key": "SMP-1"
+    }
+  }
+}
+
+### Get Jira Issue with Expanded Fields
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 8,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_get_issue",
+    "arguments": {
+      "issue_key": "SMP-1",
+      "fields": "summary,status,assignee,description,comments",
+      "expand": "transitions,changelog",
+      "comment_limit": 5
+    }
+  }
+}
+
+### Get Project Issues
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 9,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_get_project_issues",
+    "arguments": {
+      "project_key": "SMP",
+      "limit": 10
+    }
+  }
+}
+
+# =============================================
+# JIRA - USER MANAGEMENT
+# =============================================
+
+### Get Jira User Profile
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_get_user_profile",
+    "arguments": {
+      "user_identifier": "arseny.konohov2@gmail.com"
+    }
+  }
+}
+
+# =============================================
+# JIRA - TRANSITIONS & WORKFLOW
+# =============================================
+
+### Get Issue Transitions
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 11,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_get_transitions",
+    "arguments": {
+      "issue_key": "SMP-1"
+    }
+  }
+}
+
+### Transition Issue (Write Operation)
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
+
+{
+  "jsonrpc": "2.0",
+  "id": 12,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_transition_issue",
+    "arguments": {
+      "issue_key": "SMP-1",
+      "transition_id": "11",
+      "comment": "Moving to In Progress via HTTP MCP"
+    }
+  }
+}
+
+# =============================================
+# JIRA - WORKLOG
+# =============================================
+
+### Get Worklog
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 13,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_get_worklog",
+    "arguments": {
+      "issue_key": "SMP-1"
+    }
+  }
+}
+
+### Add Worklog (Write Operation)
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
+
+{
+  "jsonrpc": "2.0",
+  "id": 14,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_add_worklog",
+    "arguments": {
+      "issue_key": "SMP-1",
+      "time_spent": "2h",
+      "comment": "Working on implementation via HTTP MCP"
+    }
+  }
+}
+
+# =============================================
+# JIRA - ATTACHMENTS
+# =============================================
+
+### Download Attachments
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 15,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_download_attachments",
+    "arguments": {
+      "issue_key": "SMP-1",
+      "target_dir": "./downloads"
+    }
+  }
+}
+
+# =============================================
+# JIRA - AGILE/BOARDS
+# =============================================
+
+### Get Agile Boards
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 16,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_get_agile_boards",
+    "arguments": {
+      "project_key": "SMP",
+      "limit": 10
+    }
+  }
+}
+
+### Get Board Issues
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 17,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_get_board_issues",
+    "arguments": {
+      "board_id": "1",
+      "jql": "project = SMP"
+    }
+  }
+}
+
+### Get Sprints from Board
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 18,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_get_sprints_from_board",
+    "arguments": {
+      "board_id": "1",
+      "state": "active"
+    }
+  }
+}
+
+### Get Sprint Issues
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 19,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_get_sprint_issues",
+    "arguments": {
+      "sprint_id": "1001"
+    }
+  }
+}
+
+# =============================================
+# JIRA - LINKS
+# =============================================
+
+### Get Link Types
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 20,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_get_link_types",
+    "arguments": {}
+  }
+}
+
+### Create Issue Link (Write Operation)
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
+
+{
+  "jsonrpc": "2.0",
+  "id": 21,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_create_issue_link",
+    "arguments": {
+      "link_type": "Blocks",
+      "inward_issue_key": "SMP-1",
+      "outward_issue_key": "SMP-2"
+    }
+  }
+}
+
+### Create Remote Issue Link (Write Operation)
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
+
+{
+  "jsonrpc": "2.0",
+  "id": 22,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_create_remote_issue_link",
+    "arguments": {
+      "issue_key": "SMP-1",
+      "url": "https://example.com/documentation",
+      "title": "Related Documentation"
+    }
+  }
+}
+
+### Link to Epic (Write Operation)
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
+
+{
+  "jsonrpc": "2.0",
+  "id": 23,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_link_to_epic",
+    "arguments": {
+      "issue_key": "SMP-1",
+      "epic_key": "SMP-10"
+    }
+  }
+}
+
+# =============================================
+# JIRA - ISSUE MANAGEMENT (WRITE OPERATIONS)
+# =============================================
+
+### Create Jira Issue
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
+
+{
+  "jsonrpc": "2.0",
+  "id": 24,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_create_issue",
+    "arguments": {
+      "project_key": "SMP",
+      "summary": "Test issue created via HTTP MCP",
+      "description": "This issue was created to test the HTTP transport functionality",
+      "issue_type": "Task"
+    }
+  }
+}
+
+### Batch Create Issues
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
+
+{
+  "jsonrpc": "2.0",
+  "id": 25,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_batch_create_issues",
+    "arguments": {
+      "issues": "[{\"project_key\": \"SMP\", \"summary\": \"Batch Issue 1\", \"issue_type\": \"Task\"}, {\"project_key\": \"SMP\", \"summary\": \"Batch Issue 2\", \"issue_type\": \"Bug\"}]"
+    }
+  }
+}
+
+### Update Jira Issue
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
+
+{
+  "jsonrpc": "2.0",
+  "id": 26,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_update_issue",
+    "arguments": {
+      "issue_key": "SMP-1",
+      "fields": {
+        "summary": "Updated summary via HTTP MCP",
+        "description": "Updated description via HTTP transport"
+      }
+    }
+  }
+}
+
+### Delete Jira Issue
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
+
+{
+  "jsonrpc": "2.0",
+  "id": 27,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_delete_issue",
+    "arguments": {
+      "issue_key": "SMP-999"
+    }
+  }
+}
+
+### Add Comment to Jira Issue
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
+
+{
+  "jsonrpc": "2.0",
+  "id": 28,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_add_comment",
+    "arguments": {
+      "issue_key": "SMP-1",
+      "comment": "This comment was added via HTTP MCP transport for testing purposes."
+    }
+  }
+}
+
+# =============================================
+# JIRA - PROJECTS & VERSIONS
+# =============================================
+
+### Get All Projects
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 29,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_get_all_projects",
+    "arguments": {}
+  }
+}
+
+### Get Project Versions
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 30,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_get_project_versions",
+    "arguments": {
+      "project_key": "SMP"
+    }
+  }
+}
+
+### Create Version (Write Operation)
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
+
+{
+  "jsonrpc": "2.0",
+  "id": 31,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_create_version",
+    "arguments": {
+      "project_key": "SMP",
+      "name": "v1.0.0",
+      "description": "First release version"
+    }
+  }
+}
+
+### Batch Create Versions (Write Operation)
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
+
+{
+  "jsonrpc": "2.0",
+  "id": 32,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_batch_create_versions",
+    "arguments": {
+      "project_key": "SMP",
+      "versions": "[{\"name\": \"v1.1.0\"}, {\"name\": \"v1.2.0\"}]"
+    }
+  }
+}
+
+# =============================================
+# JIRA - SPRINTS (WRITE OPERATIONS)
+# =============================================
+
+### Create Sprint
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
+
+{
+  "jsonrpc": "2.0",
+  "id": 33,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_create_sprint",
+    "arguments": {
+      "board_id": "1",
+      "sprint_name": "Sprint 1",
+      "start_date": "2025-02-01T09:00:00.000Z",
+      "end_date": "2025-02-14T17:00:00.000Z"
+    }
+  }
+}
+
+### Update Sprint
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
+
+{
+  "jsonrpc": "2.0",
+  "id": 34,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_update_sprint",
+    "arguments": {
+      "sprint_id": "1001",
+      "sprint_name": "Updated Sprint 1",
+      "state": "active"
+    }
+  }
+}
+
+# =============================================
+# JIRA - BATCH OPERATIONS
+# =============================================
+
+### Batch Get Changelogs
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 35,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_batch_get_changelogs",
+    "arguments": {
+      "issue_ids_or_keys": ["SMP-1", "SMP-2"],
+      "limit": 10
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# =============================================
+# =============================================
+# CONFLUENCE FUNCTIONALITY
+# =============================================
+# =============================================
+
+# =============================================
+# CONFLUENCE - SEARCH
+# =============================================
+
+### Confluence Search - Basic
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 36,
+  "method": "tools/call",
+  "params": {
+    "name": "confluence_search",
+    "arguments": {
+      "query": "project documentation",
+      "limit": 10
+    }
+  }
+}
+
+### Confluence Search with CQL
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 37,
+  "method": "tools/call",
+  "params": {
+    "name": "confluence_search",
+    "arguments": {
+      "query": "type=page AND space=DEV",
+      "limit": 15
+    }
+  }
+}
+
+### Confluence Search User
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 38,
+  "method": "tools/call",
+  "params": {
+    "name": "confluence_search_user",
+    "arguments": {
+      "query": "user.fullname ~ \"John Doe\"",
+      "limit": 5
+    }
+  }
+}
+
+# =============================================
+# CONFLUENCE - PAGES
+# =============================================
+
+### Get Confluence Page by ID
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 39,
+  "method": "tools/call",
+  "params": {
+    "name": "confluence_get_page",
+    "arguments": {
+      "page_id": "123456789"
+    }
+  }
+}
+
+### Get Confluence Page by Title and Space
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 40,
+  "method": "tools/call",
+  "params": {
+    "name": "confluence_get_page",
+    "arguments": {
+      "title": "Project Documentation",
+      "space_key": "DEV"
+    }
+  }
+}
+
+### Get Page Children
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 41,
+  "method": "tools/call",
+  "params": {
+    "name": "confluence_get_page_children",
+    "arguments": {
+      "parent_id": "123456789",
+      "limit": 10
+    }
+  }
+}
+
+# =============================================
+# CONFLUENCE - COMMENTS
+# =============================================
+
+### Get Page Comments
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "tools/call",
+  "params": {
+    "name": "confluence_get_comments",
+    "arguments": {
+      "page_id": "123456789"
+    }
+  }
+}
+
+### Add Comment (Write Operation)
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
+
+{
+  "jsonrpc": "2.0",
+  "id": 43,
+  "method": "tools/call",
+  "params": {
+    "name": "confluence_add_comment",
+    "arguments": {
+      "page_id": "123456789",
+      "content": "This comment was added via HTTP MCP transport for testing."
+    }
+  }
+}
+
+# =============================================
+# CONFLUENCE - LABELS
+# =============================================
+
+### Get Page Labels
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 44,
+  "method": "tools/call",
+  "params": {
+    "name": "confluence_get_labels",
+    "arguments": {
+      "page_id": "123456789"
+    }
+  }
+}
+
+### Add Label (Write Operation)
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
+
+{
+  "jsonrpc": "2.0",
+  "id": 45,
+  "method": "tools/call",
+  "params": {
+    "name": "confluence_add_label",
+    "arguments": {
+      "page_id": "123456789",
+      "name": "testing"
+    }
+  }
+}
+
+# =============================================
+# CONFLUENCE - PAGE MANAGEMENT (WRITE OPERATIONS)
+# =============================================
+
+### Create Confluence Page
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
+
+{
+  "jsonrpc": "2.0",
+  "id": 46,
+  "method": "tools/call",
+  "params": {
+    "name": "confluence_create_page",
+    "arguments": {
+      "space_key": "DEV",
+      "title": "Test Page via HTTP MCP",
+      "content": "# Test Page\n\nThis page was created via HTTP MCP transport for testing.\n\n## Features Tested\n- HTTP transport\n- Authentication\n- Page creation",
+      "content_format": "markdown"
+    }
+  }
+}
+
+### Update Confluence Page
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
+
+{
+  "jsonrpc": "2.0",
+  "id": 47,
+  "method": "tools/call",
+  "params": {
+    "name": "confluence_update_page",
+    "arguments": {
+      "page_id": "123456789",
+      "title": "Updated Test Page via HTTP MCP",
+      "content": "# Updated Test Page\n\nThis page was updated via HTTP MCP transport.\n\n## Updated Features\n- HTTP transport\n- Authentication\n- Page updates",
+      "content_format": "markdown"
+    }
+  }
+}
+
+### Delete Confluence Page
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
+
+{
+  "jsonrpc": "2.0",
+  "id": 48,
+  "method": "tools/call",
+  "params": {
+    "name": "confluence_delete_page",
+    "arguments": {
+      "page_id": "999999999"
+    }
+  }
+}
+
+# =============================================
+# =============================================
+# MULTI-USER AUTHENTICATION EXAMPLES
+# =============================================
+# =============================================
+
+### Jira Search with OAuth Token
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
+X-Atlassian-Cloud-Id: YOUR_CLOUD_ID
+
+{
+  "jsonrpc": "2.0",
+  "id": 49,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_search",
+    "arguments": {
+      "jql": "assignee = currentUser() ORDER BY updated DESC",
+      "limit": 10
+    }
+  }
+}
+
+### Jira Search with Personal Access Token (Server/DC)
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+Authorization: Token YOUR_PERSONAL_ACCESS_TOKEN
+
+{
+  "jsonrpc": "2.0",
+  "id": 50,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_search",
+    "arguments": {
+      "jql": "reporter = currentUser() ORDER BY created DESC",
+      "limit": 5
+    }
+  }
+}
+
+### Get User Profile with OAuth Token
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
+X-Atlassian-Cloud-Id: YOUR_CLOUD_ID
+
+{
+  "jsonrpc": "2.0",
+  "id": 51,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_get_user_profile",
+    "arguments": {
+      "user_identifier": "currentUser()"
+    }
+  }
+}
+
+### Confluence Search with OAuth Token
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+Authorization: Bearer YOUR_OAUTH_ACCESS_TOKEN
+X-Atlassian-Cloud-Id: YOUR_CLOUD_ID
+
+{
+  "jsonrpc": "2.0",
+  "id": 52,
+  "method": "tools/call",
+  "params": {
+    "name": "confluence_search",
+    "arguments": {
+      "query": "type=page AND space=DEV",
+      "limit": 10
+    }
+  }
+}
+
+# =============================================
+# =============================================
+# ERROR HANDLING EXAMPLES
+# =============================================
+# =============================================
+
+### Invalid Tool Name
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 53,
+  "method": "tools/call",
+  "params": {
+    "name": "invalid_tool_name",
+    "arguments": {}
+  }
+}
+
+### Missing Required Parameters
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 54,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_get_issue",
+    "arguments": {}
+  }
+}
+
+### Invalid JQL Query
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: {{sessionId}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 55,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_search",
+    "arguments": {
+      "jql": "invalid jql syntax here",
+      "limit": 5
+    }
+  }
+}
+
+### Invalid Session ID
+POST {{baseUrl}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+mcp-session-id: invalid-session-id
+
+{
+  "jsonrpc": "2.0",
+  "id": 56,
+  "method": "tools/call",
+  "params": {
+    "name": "jira_search",
+    "arguments": {
+      "jql": "project = SMP",
+      "limit": 5
+    }
+  }
+}
+
+# =============================================
+# =============================================
+# CURL EXAMPLES
+# =============================================
+# =============================================
+
+### Health Check with curl
+# curl -X GET {{baseUrl}}/healthz
+
+### Initialize Session with curl
+# curl -X POST {{baseUrl}}/mcp \
+#   -H "Content-Type: application/json" \
+#   -H "Accept: application/json, text/event-stream" \
+#   -d '{
+#     "jsonrpc": "2.0",
+#     "id": 1,
+#     "method": "initialize",
+#     "params": {
+#       "protocolVersion": "2024-11-05",
+#       "capabilities": {"tools": {}},
+#       "clientInfo": {"name": "curl-client", "version": "1.0.0"}
+#     }
+#   }'
+
+### List Tools with curl
+# curl -X POST {{baseUrl}}/mcp \
+#   -H "Content-Type: application/json" \
+#   -H "Accept: application/json, text/event-stream" \
+#   -H "mcp-session-id: YOUR_SESSION_ID" \
+#   -d '{
+#     "jsonrpc": "2.0",
+#     "id": 2,
+#     "method": "tools/list",
+#     "params": {}
+#   }'
+
+### Search Jira Issues with curl and OAuth
+# curl -X POST {{baseUrl}}/mcp \
+#   -H "Content-Type: application/json" \
+#   -H "Accept: application/json, text/event-stream" \
+#   -H "mcp-session-id: YOUR_SESSION_ID" \
+#   -H "Authorization: Bearer YOUR_OAUTH_TOKEN" \
+#   -H "X-Atlassian-Cloud-Id: YOUR_CLOUD_ID" \
+#   -d '{
+#     "jsonrpc": "2.0",
+#     "id": 3,
+#     "method": "tools/call",
+#     "params": {
+#       "name": "jira_search",
+#       "arguments": {
+#         "jql": "project = SMP ORDER BY created DESC",
+#         "limit": 5
+#       }
+#     }
+#   }'
+
+### Search Jira Issues with curl and PAT
+# curl -X POST {{baseUrl}}/mcp \
+#   -H "Content-Type: application/json" \
+#   -H "Accept: application/json, text/event-stream" \
+#   -H "mcp-session-id: YOUR_SESSION_ID" \
+#   -H "Authorization: Token YOUR_PERSONAL_ACCESS_TOKEN" \
+#   -d '{
+#     "jsonrpc": "2.0",
+#     "id": 4,
+#     "method": "tools/call",
+#     "params": {
+#       "name": "jira_search",
+#       "arguments": {
+#         "jql": "assignee = currentUser()",
+#         "limit": 10
+#       }
+#     }
+#   }'
+
+### Search Confluence Pages with curl
+# curl -X POST {{baseUrl}}/mcp \
+#   -H "Content-Type: application/json" \
+#   -H "Accept: application/json, text/event-stream" \
+#   -H "mcp-session-id: YOUR_SESSION_ID" \
+#   -d '{
+#     "jsonrpc": "2.0",
+#     "id": 5,
+#     "method": "tools/call",
+#     "params": {
+#       "name": "confluence_search",
+#       "arguments": {
+#         "query": "project documentation",
+#         "limit": 10
+#       }
+#     }
+#   }'
+
+# =============================================
+# =============================================
+# TESTING WORKFLOW
+# =============================================
+# =============================================
+# Recommended testing sequence:
+#
+# 1. HEALTH CHECK / INIT:
+#    - Start with health check to verify server is running
+#    - Initialize MCP session and send initialized notification
+#    - List available tools to see what's configured
+#
+# 2. JIRA FUNCTIONALITY:
+#    - Test read operations first (search, get issue, get user profile)
+#    - Test agile/boards operations (get boards, sprints, board issues)
+#    - Test worklog and attachments operations
+#    - Test write operations if needed (create, update, delete, comments)
+#    - Test batch operations and advanced features
+#
+# 3. CONFLUENCE FUNCTIONALITY:
+#    - Test search operations (basic search, CQL, user search)
+#    - Test page operations (get page, get children, get comments)
+#    - Test label operations
+#    - Test write operations if needed (create, update, delete pages)
+#
+# 4. ERROR HANDLING:
+#    - Test with invalid tool names
+#    - Test with missing required parameters
+#    - Test with invalid JQL queries
+#    - Test with invalid session IDs
+#
+# 5. MULTI-USER AUTHENTICATION:
+#    - Test with OAuth tokens for Cloud instances
+#    - Test with Personal Access Tokens for Server/DC
+#    - Test with different user contexts
+#
+# Expected responses:
+# - Health check: {"status": "ok"}
+# - Initialize: Server capabilities and protocol info
+# - Tools list: Array of available tools with schemas
+# - Tool calls: Results from Atlassian APIs formatted as MCP responses
+# - Errors: Proper JSON-RPC error responses with details
+
+# =============================================
+# =============================================
+# DEBUGGING TIPS
+# =============================================
+# =============================================
+# 1. Enable verbose logging: --verbose flag when starting server
+# 2. Check server logs for authentication and API call details
+# 3. Verify environment variables are loaded correctly (.env file)
+# 4. Test with simple read operations before write operations
+# 5. Use MCP session IDs for tracking requests in logs
+# 6. Check Atlassian API documentation for valid JQL and parameters
+# 7. Verify OAuth tokens have required scopes for operations
+# 8. For Cloud instances, ensure X-Atlassian-Cloud-Id header is provided
+# 9. For Server/DC instances, use Personal Access Tokens with Token auth
+# 10. Check network connectivity and firewall settings
+# 11. Verify SSL/TLS certificates if using HTTPS endpoints
+# 12. Use browser developer tools to inspect network requests if needed
+
+# =============================================
+# =============================================
+# NOTES
+# =============================================
+# =============================================
+# - All MCP protocol requests MUST include Accept header with both
+#   "application/json" and "text/event-stream" for proper content negotiation
+# - Session management: Include "mcp-session-id" header in all requests after initialization
+# - Write operations require proper authentication (OAuth or PAT)
+# - Some operations may require specific permissions in Atlassian
+# - Rate limiting may apply depending on your Atlassian instance configuration
+# - For production use, replace placeholder values with actual credentials and IDs
