@@ -1243,6 +1243,25 @@
                     "type": "object"
                 }
             },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             {
                 "name": "confluence_search",
                 "description": "Search Confluence content using simple terms or CQL.\n\nArgs:\n    ctx: The FastMCP context.\n    query: Search query - can be simple text or a CQL query string.\n    limit: Maximum number of results (1-50).\n    spaces_filter: Comma-separated list of space keys to filter by.\n\nReturns:\n    JSON string representing a list of simplified Confluence page objects.\n",
