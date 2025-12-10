@@ -22,6 +22,7 @@
    - Main LLM Provider (configurable: cloud/local)
    - Mini-LLM for semantic processing (tool matching, intent analysis)
    - **DAG Engine (structure generation and mutation)** - backend orchestration
+   - **Context Engine (context management & caching)** - backend context processing *(see Design/ContextEngine.md)*
    - MCP Registry (trusted server catalog)
    - DAG Storage (database for DAG persistence and caching)
 
@@ -48,6 +49,11 @@ Server Layer (Backend)
 │   ├── Tool Matching (calls mini-LLM)
 │   ├── Graph Builder/Mutator
 │   └── Execution Coordinator
+├── Context Engine (context management & caching)
+│   ├── Context Collector (gathers relevant context)
+│   ├── Context Processor (filters & summarizes)
+│   ├── Context Storage (selective caching)
+│   └── Context Retrieval (provides context to components)
 ├── LLM Provider (semantic processing)
 ├── Mini-LLM (tool matching)
 ├── MCP Registry (server catalog)
@@ -72,50 +78,71 @@ Business Client (Web App)
 ├── UI Layer (request input)
 │   │
 │   ▼
-├── DAG Sync Client → Sync API → Backend DAG Engine
+├── Context Engine (client-side context collection)
 │   │
-│   │  (request text + context)
+│   │  gathers user context + history
+│   ▼
+├── DAG Sync Client → Sync API → Backend Context Engine
+│   │
+│   │  syncs context to backend
+│   ▼
+│   Backend Context Engine (context processing)
+│   │
+│   │  filters, summarizes, caches selectively
+│   ▼
+│   Backend DAG Engine → Context Engine (context retrieval)
+│   │
+│   │  provides relevant context for DAG building
 │   ▼
 │   Backend DAG Engine → LLM Provider (semantic processing)
 │   │
-│   │  generates task decomposition
+│   │  generates task decomposition with context
 │   ▼
 │   Backend DAG Engine → Mini-LLM (tool matching)
 │   │
-│   │  matches tools to tasks
+│   │  matches tools to tasks with context
 │   ▼
 │   Backend DAG Engine
 │   │
-│   │  builds DAG structure
+│   │  builds DAG structure with context awareness
+│   ▼
+│   Context Engine (updates context with DAG results)
+│   │
+│   │  caches execution context for future use
 │   ▼
 │   DAG Storage (persistence & caching)
 │   │
-│   │  saves DAG + execution history
+│   │  saves DAG + execution history + context
 │   ▼
 │   Sync API (WebSocket) → Client Sync Client
 │   │
-│   │  synchronizes DAG to UI
+│   │  synchronizes DAG + context to UI
+│   ▼
+├── Context Engine (client-side context update)
+│   │
+│   │  receives and caches synced context
 │   ▼
 ├── DAG Executor (browser-based execution)
 │   │
-│   │  executes DAG locally
+│   │  executes DAG with local context
 │   ▼
 ├── Mini-Orchestrator (coordinates with backend)
 │   │
-│   │  manages execution coordination
+│   │  manages execution coordination with context
 │   ▼
 ├── MCP-Host (local runtime)
 │   │
-│   │  orchestrates tool calls
+│   │  orchestrates tool calls with context
 │   ▼
 ├── MCP Servers (external tools)
 │   │
-│   │  execute actual tools
+│   │  execute actual tools with context
 │   ▼
-│   Results → Sync API → UI Layer (real-time updates)
+│   Results → Context Engine → Sync API → UI Layer (contextual updates)
 │
 └── Server Layer (Backend)
     ├── DAG Engine (generation & mutation)
+    ├── Context Engine (context management & caching)
     ├── LLM Provider (semantic processing)
     ├── Mini-LLM (tool matching)
     ├── MCP Registry (server catalog)
@@ -136,6 +163,7 @@ You can build these as separate modules:
 
 **Server-Side Units (Backend):**
 - **DAG Engine module** (graph generation, mutation, backend orchestration)
+- **Context Engine module** (context management, caching, retrieval)
 - LLM Provider Interface (pluggable models for semantics)
 - Semantic Processor (mini-LLM wrapper for tool matching)
 - MCP Registry Service (server catalog)
@@ -152,10 +180,12 @@ You can build these as separate modules:
 
 1. **DAG Generation Flow:** UI → Backend DAG Engine → LLM Provider → DAG Structure → DAG Storage → Sync to UI
 2. **DAG Execution Flow:** UI DAG Executor → Sync Client → Backend DAG Engine → Mini-Orchestrator → MCP-Host → MCP Servers → Results Sync → UI
-3. **Tool Discovery:** MCP Registry → MCP-Host → Tool Registry → Backend DAG Engine → Sync to UI
-4. **DAG Sync Flow:** Backend DAG Storage ↔ Sync API ↔ Client Sync Client (WebSocket for real-time updates)
-5. **Mutation Flow:** UI Request → Backend DAG Engine → LLM Provider → Graph Mutations → DAG Storage → Sync to UI
+3. **Context Management Flow:** Client Context Engine ↔ Backend Context Engine ↔ DAG Engine ↔ LLM Provider (contextual awareness)
+4. **Tool Discovery:** MCP Registry → MCP-Host → Tool Registry → Backend DAG Engine → Sync to UI
+5. **DAG Sync Flow:** Backend DAG Storage ↔ Sync API ↔ Client Sync Client (WebSocket for real-time updates)
+6. **Mutation Flow:** UI Request → Backend DAG Engine → LLM Provider → Graph Mutations → DAG Storage → Sync to UI
+
 
 ### Architecture Principles
 
-This architecture implements a **hybrid DAG approach** with backend intelligence and UI execution, ensuring **real-time synchronization** between server-side DAG generation and client-side execution. The DAG Engine serves as the backend "agent brain" for complex orchestration, while the DAG Executor provides responsive UI execution. DAG Storage enables persistence, caching, and history tracking, with WebSocket-based sync maintaining consistency across distributed components. LLM providers remain external for semantic processing, maximizing privacy while enabling powerful workflow automation.
+This architecture implements a **hybrid DAG approach** with backend intelligence and UI execution, ensuring **real-time synchronization** between server-side DAG generation and client-side execution. The DAG Engine serves as the backend "agent brain" for complex orchestration, while the DAG Executor provides responsive UI execution. DAG Storage enables persistence, caching, and history tracking, with WebSocket-based sync maintaining consistency across distributed components. LLM providers remain external for semantic processing, maximizing privacy while enabling powerful workflow automation. The Context Engine provides intelligent context management, enabling adaptive and context-aware workflow execution across research and operational tasks.
