@@ -4,7 +4,7 @@
 
 ### Core Components Breakdown
 
-1. **Business Client (Web Application)**
+1. **UI Client (Web Application)**
    - Thin web UI for user interaction
    - **DAG Executor (UI execution tool)** - executes DAG locally in browser
    - Visual DAG renderer and progress display
@@ -31,7 +31,7 @@
 ```
 User Input
     ↓
-Business Client (Web App)
+UI Client (Web App)
 ├── UI Layer (displays DAG, progress, results)
 ├── DAG Executor (browser-based execution)
 │   ├── Local DAG Runner
@@ -74,7 +74,7 @@ MCP Servers (external tools)
 User Input
      │
      ▼
-Business Client (Web App)
+UI Client (Web App)
 ├── UI Layer (request input)
 │   │
 │   ▼
