@@ -9,7 +9,7 @@
    - **DAG Executor (UI execution tool)** - executes DAG locally in browser
    - Visual DAG renderer and progress display
    - Configuration manager for LLM providers
-   - DAG sync client (keeps UI DAG in sync with backend)
+   - Notification Service (real-time sync for DAG, context, and state updates)
 
 2. **MCP-Host (Local Runtime)**
    - Tool registry and management
@@ -36,7 +36,7 @@ UI Client (Web App)
 ├── DAG Executor (browser-based execution)
 │   ├── Local DAG Runner
 │   ├── Progress Tracker
-│   └── Sync Client (real-time sync with backend)
+│   └── Notification Client (real-time sync for all updates)
 ├── MCP-Host (local runtime)
 │   ├── Tool Registry (maps MCP server capabilities)
 │   ├── Client Manager (connects to MCP servers)
@@ -82,7 +82,7 @@ UI Client (Web App)
 │   │
 │   │  gathers user context + history
 │   ▼
-├── DAG Sync Client → Sync API → Backend Context Engine
+├── Notification Client → Sync API → Backend Context Engine
 │   │
 │   │  syncs context to backend
 │   ▼
@@ -114,7 +114,7 @@ UI Client (Web App)
 │   │
 │   │  saves DAG + execution history + context
 │   ▼
-│   Sync API (WebSocket) → Client Sync Client
+│   Sync API (WebSocket) → Notification Client
 │   │
 │   │  synchronizes DAG + context to UI
 │   ▼
@@ -155,7 +155,7 @@ You can build these as separate modules:
 
 **Client-Side Units (Web App):**
 - **DAG Executor module** (browser-based DAG execution and progress tracking)
-- DAG Sync Client (real-time sync with backend DAG state)
+- Notification Service Client (real-time sync for all application updates)
 - MCP-Host module (tool orchestration)
 - UI Rendering Engine (DAG visualization)
 - Local Config Manager (user preferences)
@@ -179,10 +179,10 @@ You can build these as separate modules:
 ### Key Integration Points
 
 1. **DAG Generation Flow:** UI → Backend DAG Engine → LLM Provider → DAG Structure → DAG Storage → Sync to UI
-2. **DAG Execution Flow:** UI DAG Executor → Sync Client → Backend DAG Engine → Mini-Orchestrator → MCP-Host → MCP Servers → Results Sync → UI
+2. **DAG Execution Flow:** UI DAG Executor → Notification Service → Backend DAG Engine → Mini-Orchestrator → MCP-Host → MCP Servers → Results Sync → UI
 3. **Context Management Flow:** Client Context Engine ↔ Backend Context Engine ↔ DAG Engine ↔ LLM Provider (contextual awareness)
 4. **Tool Discovery:** MCP Registry → MCP-Host → Tool Registry → Backend DAG Engine → Sync to UI
-5. **DAG Sync Flow:** Backend DAG Storage ↔ Sync API ↔ Client Sync Client (WebSocket for real-time updates)
+5. **Notification Flow:** Backend DAG Storage ↔ Sync API ↔ Notification Service (WebSocket for real-time updates)
 6. **Mutation Flow:** UI Request → Backend DAG Engine → LLM Provider → Graph Mutations → DAG Storage → Sync to UI
 
 
