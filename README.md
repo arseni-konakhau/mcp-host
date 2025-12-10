@@ -60,6 +60,54 @@ Server Layer (Backend)
 MCP Servers (external tools)
 ```
 
+### Component Communication Flow
+
+**🎯 High-Level Data Flow (Updated for Hybrid Architecture):**
+
+```
+User
+     │
+     ▼
+UI (client)
+     │ request input
+     ▼
+DAG Sync Client → Backend DAG Engine (via Sync API)
+     │
+     │  (request text + context)
+     ▼
+LLM Provider (server)
+     │
+     │  generates semantics / tasks
+     ▼
+Backend DAG Engine
+     │
+     │  builds DAG structure
+     ▼
+DAG Storage (database)
+     │
+     │  saves + caches DAG
+     ▼
+Sync API (WebSocket) → Client Sync Client
+     │
+     │  synchronizes DAG to UI
+     ▼
+UI DAG Executor (browser)
+     │
+     │  executes DAG locally
+     ▼
+Mini-Orchestrator (client)
+     │
+     │  coordinates with backend
+     ▼
+MCP-Host
+     │
+     ▼
+MCP Servers
+     │
+     ▼
+Results → Sync API → UI (real-time)
+```
+
 ### Independent Development Units
 
 You can build these as separate modules:
