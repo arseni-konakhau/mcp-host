@@ -65,47 +65,61 @@ MCP Servers (external tools)
 **🎯 High-Level Data Flow (Updated for Hybrid Architecture):**
 
 ```
-User
+User Input
      │
      ▼
-UI (client)
-     │ request input
-     ▼
-DAG Sync Client → Backend DAG Engine (via Sync API)
-     │
-     │  (request text + context)
-     ▼
-LLM Provider (server)
-     │
-     │  generates semantics / tasks
-     ▼
-Backend DAG Engine
-     │
-     │  builds DAG structure
-     ▼
-DAG Storage (database)
-     │
-     │  saves + caches DAG
-     ▼
-Sync API (WebSocket) → Client Sync Client
-     │
-     │  synchronizes DAG to UI
-     ▼
-UI DAG Executor (browser)
-     │
-     │  executes DAG locally
-     ▼
-Mini-Orchestrator (client)
-     │
-     │  coordinates with backend
-     ▼
-MCP-Host
-     │
-     ▼
-MCP Servers
-     │
-     ▼
-Results → Sync API → UI (real-time)
+Business Client (Web App)
+├── UI Layer (request input)
+│   │
+│   ▼
+├── DAG Sync Client → Sync API → Backend DAG Engine
+│   │
+│   │  (request text + context)
+│   ▼
+│   Backend DAG Engine → LLM Provider (semantic processing)
+│   │
+│   │  generates task decomposition
+│   ▼
+│   Backend DAG Engine → Mini-LLM (tool matching)
+│   │
+│   │  matches tools to tasks
+│   ▼
+│   Backend DAG Engine
+│   │
+│   │  builds DAG structure
+│   ▼
+│   DAG Storage (persistence & caching)
+│   │
+│   │  saves DAG + execution history
+│   ▼
+│   Sync API (WebSocket) → Client Sync Client
+│   │
+│   │  synchronizes DAG to UI
+│   ▼
+├── DAG Executor (browser-based execution)
+│   │
+│   │  executes DAG locally
+│   ▼
+├── Mini-Orchestrator (coordinates with backend)
+│   │
+│   │  manages execution coordination
+│   ▼
+├── MCP-Host (local runtime)
+│   │
+│   │  orchestrates tool calls
+│   ▼
+├── MCP Servers (external tools)
+│   │
+│   │  execute actual tools
+│   ▼
+│   Results → Sync API → UI Layer (real-time updates)
+│
+└── Server Layer (Backend)
+    ├── DAG Engine (generation & mutation)
+    ├── LLM Provider (semantic processing)
+    ├── Mini-LLM (tool matching)
+    ├── MCP Registry (server catalog)
+    └── DAG Storage (database)
 ```
 
 ### Independent Development Units
